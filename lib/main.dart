@@ -21,7 +21,10 @@ class MainApp extends StatelessWidget {
         backgroundColor: Theme.of(context).primaryColor,
         title: Text(
           'Video Player Application',
-          style: TextStyle(color: Theme.of(context).textTheme.bodyLarge!.color),
+          style: TextStyle(
+              color: Theme.of(context).textTheme.bodyLarge!.color,
+              fontWeight: FontWeight.w700,
+              fontSize: 25),
         ),
       ),
       body: const Padding(

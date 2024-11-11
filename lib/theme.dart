@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
 ThemeData myThemeData = ThemeData(
-  primaryColor: Color(0xFF212529),
-  textTheme: TextTheme(
+  primaryColor: const Color(0xFF212529),
+  textTheme: const TextTheme(
     headlineLarge: TextStyle(
       fontSize: 24.0,
       fontWeight: FontWeight.bold,
