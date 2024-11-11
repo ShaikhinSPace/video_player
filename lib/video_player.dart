@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:chewie/chewie.dart';
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
@@ -14,6 +16,9 @@ class CustomVideoPlayer extends StatefulWidget {
 class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
   late final ValueNotifier<VideoPlayerController> _videoPlayerController;
   late final ValueNotifier<ChewieController?> _chewieController;
+  final ValueNotifier<bool> isPlaying = ValueNotifier<bool>(false);
+  final ValueNotifier<Duration> currentTime =
+      ValueNotifier<Duration>(Duration.zero);
 
   @override
   void initState() {
@@ -33,22 +38,59 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
   Future<void> _initializeControllers() async {
     await _videoPlayerController.value.initialize();
     _chewieController.value = ChewieController(
+      placeholder: FlutterLogo(),
       controlsSafeAreaMinimum: const EdgeInsets.all(0),
       videoPlayerController: _videoPlayerController.value,
-      // aspectRatio: 4 / 3,
+      showControls: false,
       autoPlay: false,
       looping: false,
     );
+    _videoPlayerController.value.addListener(() {
+      currentTime.value =
+          _videoPlayerController.value.value.position ?? Duration.zero;
+    });
+    log('CURRENTTIME:::${currentTime.value}');
+  }
+
+  void _playPause() {
+    if (_chewieController.value != null &&
+        !_chewieController.value!.isPlaying) {
+      _chewieController.value!.play();
+      isPlaying.value = true;
+    } else if (_chewieController.value != null &&
+        _chewieController.value!.isPlaying) {
+      _chewieController.value!.pause();
+      isPlaying.value = false;
+    }
+    log('CURRENTTIME:::${currentTime.value}');
+  }
+
+  void _seekForward() {
+    final currentPos =
+        _videoPlayerController.value.value.position ?? Duration.zero;
+    final newPosition = currentPos + Duration(seconds: 5);
+    _videoPlayerController.value.seekTo(newPosition);
   }
 
   @override
   void dispose() {
-    // Dispose of both controllers when done
     _videoPlayerController.value.dispose();
     _videoPlayerController.dispose();
     _chewieController.value?.dispose();
     _chewieController.dispose();
+    isPlaying.dispose();
+    currentTime.dispose();
     super.dispose();
+  }
+
+  // Helper function to format the Duration as hh:mm:ss
+  String _formatDuration(Duration duration) {
+    String twoDigits(int n) => n.toString().padLeft(2, '0');
+    String hours = twoDigits(duration.inHours);
+    String minutes = twoDigits(duration.inMinutes.remainder(60));
+    String seconds = twoDigits(duration.inSeconds.remainder(60));
+
+    return "$hours:$minutes:$seconds";
   }
 
   @override
@@ -62,83 +104,98 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
             color: Colors.black,
             borderRadius: BorderRadius.circular(25),
           ),
-          child: Expanded(
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(20),
-              child: ValueListenableBuilder<ChewieController?>(
-                valueListenable: _chewieController,
-                builder: (context, chewieController, child) {
-                  if (chewieController != null &&
-                      chewieController
-                          .videoPlayerController.value.isInitialized) {
-                    return Stack(
-                      children: [
-                        Chewie(controller: chewieController),
-                        Positioned(
-                          bottom:
-                              100 + 10, // adjust position based on preference
-                          right: 0, // adjust position based on preference
-                          child: Text(
-                            "WaterMark",
-                            style: TextStyle(
-                              color: Colors.white.withOpacity(
-                                  0.3), // semi-transparent watermark
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
-                            ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(20),
+            child: ValueListenableBuilder<ChewieController?>(
+              valueListenable: _chewieController,
+              builder: (context, chewieController, child) {
+                if (chewieController != null &&
+                    chewieController
+                        .videoPlayerController.value.isInitialized) {
+                  return Stack(
+                    children: [
+                      Chewie(controller: chewieController),
+                      Positioned(
+                        bottom: 110,
+                        right: 0,
+                        child: Text(
+                          "WaterMark",
+                          style: TextStyle(
+                            color: Colors.white.withOpacity(0.3),
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
-                      ],
-                    );
-                  } else {
-                    return const Center(child: CircularProgressIndicator());
-                  }
-                },
-              ),
+                      ),
+                    ],
+                  );
+                } else {
+                  return Center(
+                    child: CircularProgressIndicator(
+                      color: Theme.of(context).textTheme.bodyLarge!.color,
+                    ),
+                  );
+                }
+              },
             ),
           ),
         ),
-        const SizedBox(
-          height: 10,
-        ),
+        const SizedBox(height: 10),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             ElevatedButton.icon(
-                style: ButtonStyle(
-                    backgroundColor: WidgetStatePropertyAll(
-                  Theme.of(context).textTheme.bodyLarge!.color,
-                )),
-                onPressed: () {},
-                label: const Icon(
-                  Icons.skip_previous,
-                  color: Colors.black,
-                )),
-            ElevatedButton.icon(
-                style: ButtonStyle(
-                    backgroundColor: WidgetStatePropertyAll(
-                  Theme.of(context).textTheme.bodyLarge!.color,
-                )),
-                onPressed: () {
-                  _chewieController.value?.pause();
-                },
-                label: const Icon(
-                  Icons.play_arrow,
-                  color: Colors.black,
-                )),
-            ElevatedButton.icon(
-              onPressed: () {},
-              label: const Icon(
-                Icons.skip_next,
-                color: Colors.black,
-              ),
               style: ButtonStyle(
-                  backgroundColor: WidgetStatePropertyAll(
-                Theme.of(context).textTheme.bodyLarge!.color,
-              )),
+                backgroundColor: MaterialStateProperty.all(
+                  Theme.of(context).textTheme.bodyLarge!.color,
+                ),
+              ),
+              onPressed: () {},
+              icon: const Icon(Icons.skip_previous, color: Colors.black),
+              label: const Text(""),
+            ),
+            ValueListenableBuilder(
+              valueListenable: isPlaying,
+              builder: (context, playing, _) {
+                return ElevatedButton.icon(
+                  style: ButtonStyle(
+                    backgroundColor: MaterialStateProperty.all(
+                      Theme.of(context).textTheme.bodyLarge!.color,
+                    ),
+                  ),
+                  onPressed: _playPause,
+                  icon: Icon(
+                    playing ? Icons.pause : Icons.play_arrow,
+                    color: Colors.black,
+                  ),
+                  label: const Text(""),
+                );
+              },
+            ),
+            ElevatedButton.icon(
+              onPressed: _seekForward,
+              icon: const Icon(Icons.skip_next, color: Colors.black),
+              label: const Text(""),
+              style: ButtonStyle(
+                backgroundColor: MaterialStateProperty.all(
+                  Theme.of(context).textTheme.bodyLarge!.color,
+                ),
+              ),
             ),
           ],
-        )
+        ),
+        ValueListenableBuilder(
+          valueListenable: currentTime,
+          builder: (context, time, _) {
+            return Text(
+              _formatDuration(time),
+              style: TextStyle(
+                color: Theme.of(context).textTheme.bodyLarge!.color,
+                fontWeight: FontWeight.w700,
+              ),
+            );
+          },
+        ),
       ],
     );
   }
