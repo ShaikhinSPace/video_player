@@ -1,5 +1,5 @@
 import 'package:ag_video_player/theme.dart';
-import 'package:ag_video_player/video_player.dart';
+import 'package:ag_video_player/custom_video_player.dart';
 import 'package:flutter/material.dart';
 
 void main() {
